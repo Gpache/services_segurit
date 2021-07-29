@@ -6,9 +6,7 @@ volumes:
   vol-emqx-log:
     name: foo-emqx-log
 
-
 services:
-
   node:
     container_name: node
     image: "node:14"
@@ -58,7 +56,6 @@ services:
       - vol-emqx-data:/opt/emqx/data
       - vol-emqx-log:/opt/emqx/log
 
-  
     links:
       - mongo
 
@@ -66,7 +63,7 @@ services:
       - "localhost:192.168.0.6"
 
     environment:
-      EMQX_NAME: ioticos-gl
+      EMQX_NAME: segurit
       EMQX_HOST: 127.0.0.1
 
       TZ: "${TZ}"
@@ -113,4 +110,3 @@ services:
       EMQX_LOADED_PLUGINS: "emqx_recon,emqx_retainer,emqx_management,emqx_dashboard,emqx_auth_mongo"
 
       EMQX_LISTENER__TCP__EXTERNAL__MAX_CONNECTIONS: 1000
-

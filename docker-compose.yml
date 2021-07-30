@@ -3,12 +3,11 @@ version: "3.8"
 volumes:
   vol-emqx-data:
     name: foo-emqx-data
-#  vol-emqx-etc:
-#    name: foo-emqx-etc
+  #  vol-emqx-etc:
+  #    name: foo-emqx-etc
   vol-emqx-log:
     name: foo-emqx-log
 #
-
 
 services:
   mongo:
@@ -43,10 +42,10 @@ services:
       - mongo
 
     extra_hosts:
-      - "localhost:192.168.0.6"
+      - "localhost:192.168.1.103"
 
     environment:
-      EMQX_NAME: ioticos-gl
+      EMQX_NAME: segurit
       EMQX_HOST: 127.0.0.1
 
       TZ: "${TZ}"
@@ -72,7 +71,7 @@ services:
       EMQX_AUTH__MONGO__PASSWORD: "${MONGO_PASSWORD}"
       EMQX_AUTH__MONGO__AUTH_SOURCE: admin
 
-      EMQX_AUTH__MONGO__DATABASE: "ioticos_god_level"
+      EMQX_AUTH__MONGO__DATABASE: "segurit"
       EMQX_AUTH__MONGO__AUTH_QUERY__COLLECTION: "emqxauthrules"
 
       EMQX_AUTH__MONGO__SUPER_QUERY__COLLECTION: "emqxauthrules"

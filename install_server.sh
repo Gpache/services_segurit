@@ -143,6 +143,23 @@ do
   echo "      Selected EMQX API WEB TOKEN  ► ${EMQX_API_TOKEN} ✅"
 done
 
+#PUBLIC KEY
+printf "\n\n🔐 Necesitamos crear la public key para las notificaciones push \n"
+while [[ -z "$PUBLIC_VAPID_KEY" ]]
+do
+  read -p "   PUBLIC KEY (BJb6iftIKgiwTplf85gyzxde5QgtWkv2p6H82vwuxJfZ3xXH0uUFU8SiTnIVjx1JZjm-0Bd-cOMHRlYkGrmjGPc): "  PUBLIC_VAPID_KEY
+  PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-BJb6iftIKgiwTplf85gyzxde5QgtWkv2p6H82vwuxJfZ3xXH0uUFU8SiTnIVjx1JZjm-0Bd-cOMHRlYkGrmjGPc}
+  echo "      Selected PUBLIC KEY ► ${PUBLIC_VAPID_KEY} ✅"
+done
+
+#PRIVATE KEY
+printf "\n\n🔐 Necesitamos crear la private key para las notificaciones push \n"
+while [[ -z "$PRIVATE_VAPID_KEY" ]]
+do
+  read -p "   PRIVATE KEY (Ib6zz9e-xyPBiESzB9fQxUGOMnOUOXSj8JZGUvd5210): "  PRIVATE_VAPID_KEY
+  PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-Ib6zz9e-xyPBiESzB9fQxUGOMnOUOXSj8JZGUvd5210}
+  echo "      Selected PRIVATE KEY ► ${PRIVATE_VAPID_KEY} ✅"
+done
 
 
 
@@ -243,6 +260,8 @@ printf "   🟢 WEBHOOK WEB TOKEN: $(tput setaf 128)${EMQX_API_TOKEN}$(tput seta
 printf "   🟢 DOMAIN: $(tput setaf 128)${DOMAIN}$(tput setaf 7)\n"
 printf "   🟢 IP: $(tput setaf 128)${IP}$(tput setaf 7)\n"
 printf "   🟢 SSL?: $(tput setaf 128)${opt}$(tput setaf 7)\n"
+printf "   🟢 PUBLIC KEY: $(tput setaf 128)${PUBLIC_VAPID_KEY}$(tput setaf 7)\n"
+printf "   🟢 PRIVATE KEY: $(tput setaf 128)${PRIVATE_VAPID_KEY}$(tput setaf 7)\n"
 
 printf "\n\n\n\n";
 read -p "Presiona Enter para comenzar la instalación..."
@@ -324,6 +343,9 @@ sudo sh -c "echo 'MQTT_PREFIX=${WSPREFIX}' >> $filename"
 
 sudo sh -c " echo 'SSLREDIRECT=${SSLREDIRECT}' >> $filename"
 
+# WEB PUSH
+sudo sh -c "echo 'PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}' >> $filename"
+sudo sh -c "echo 'PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}' >> $filename"
 
 cd ..
 

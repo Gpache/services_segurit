@@ -223,11 +223,19 @@ SSLREDIRECT=""
 
 if [[ $SSL -eq 1 ]]
   then
+        #EMAIL
+    printf "\n\n🌐 Ingresa una dirección de email válida para gestionar los certificados. \n"
+
+    while [[ -z "$EMAIL" ]]
+    do
+      read -p "   EMAIL: "  EMAIL
+      echo "         EMAIL INGRESADO ► ${EMAIL} ✅"
+    done
     SSL="https://"
     WSPREFIX="wss://"
     MQTT_HOST=$DOMAIN
     MQTT_PORT="8084"
-    SSLREDIRECT="true"
+    SSLREDIRECT="false"
   else
     SSL="http://"
     WSPREFIX="ws://"
@@ -235,6 +243,29 @@ if [[ $SSL -eq 1 ]]
     MQTT_HOST=$IP
     SSLREDIRECT="false"
 fi
+
+# Entorno del servidor?
+printf "\n\n🔐 Seleccione el entorno en que se instalará el servidor \n"
+
+PS3='   ENTORNO?: '
+options=("Producción" "Desarrollo")
+select opt in "${options[@]}"
+do
+    case $REPLY in
+        "1")
+            echo "         ENTORNO? ► ${character} ✅"
+            break
+            ;;
+        "2")
+            echo "         ENTORNO? ► ${character} ✅"
+            break
+            ;;
+        *) echo "invalid option $REPLY";;
+    esac
+done
+
+
+ENTORNO=$REPLY
 
 msg="
    __                                      
@@ -267,97 +298,401 @@ printf "\n\n\n\n";
 read -p "Presiona Enter para comenzar la instalación..."
 sleep 2
 
-
 sudo apt-get update
 sudo git clone https://github.com/Gpache/services_segurit.git
 sudo mv services_segurit services
 
+sudo ufw allow ssh
 
-cd services
+if [[ $ENTORNO -eq 1 ]]
+  then
+    cd services
 
-## ______________________________
-## INSALL INIT
-filename='.env'
+    sudo mkdir data
+    cd data
+    sudo mkdir certbot
+    cd certbot
+    sudo mkdir www
+    cd www
+    sudo mkdir .well-known
+    cd ..
+    cd ..
+    sudo mkdir nginx
+    cd nginx
+    filename='app.conf'
+    sudo sh -c " echo '#upstream miapp {' >> $filename"
+    sudo sh -c " echo '#        server node:3000;' >> $filename"
+    sudo sh -c " echo '#};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 80;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '    location /.well-known/acme-challenge/ {' >> $filename"
+    sudo sh -c " echo '    root /var/www/certbot;' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '    return 301 https://\$host\$request_uri;' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 443 ssl;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '        proxy_pass http://node:3000; #for demo purposes' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;' >> $filename"
+    sudo sh -c " echo '    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;' >> $filename"
+    sudo sh -c " echo '    include /etc/letsencrypt/options-ssl-nginx.conf;' >> $filename"
+    sudo sh -c " echo '    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    #sudo touch app.conf
+    cd ..
+    cd ..
 
-
-#SERVICES .ENV
-sudo sh -c " echo 'environment=prod' >> $filename"
-sudo sh -c " echo '' >> $filename"
-sudo sh -c " echo '# TIMEZONE (all containers).' >> $filename"
-sudo sh -c " echo 'TZ=${TZ}' >> $filename"
-sudo sh -c " echo '' >> $filename"
-sudo sh -c " echo '# M O N G O' >> $filename"
-sudo sh -c " echo 'MONGO_USERNAME=${MONGO_USERNAME}' >> $filename"
-sudo sh -c " echo 'MONGO_PASSWORD=${MONGO_PASSWORD}' >> $filename"
-sudo sh -c " echo 'MONGO_EXT_PORT=${MONGO_PORT}' >> $filename"
-sudo sh -c " echo '' >> $filename"
-sudo sh -c " echo '# E M Q X' >> $filename"
-sudo sh -c " echo 'EMQX_DEFAULT_USER_PASSWORD=${EMQX_DEFAULT_USER_PASSWORD}' >> $filename"
-sudo sh -c " echo 'EMQX_DEFAULT_APPLICATION_SECRET=${EMQX_DEFAULT_APPLICATION_SECRET}' >> $filename"
-
-
-sudo git clone https://github.com/Gpache/app_segurit.git
-sudo mv app_segurit  app
-
-cd app
-
-sudo sh -c "echo 'environment=prod' >> $filename"
-sudo sh -c "echo '' >> $filename"
-
-#A P I  - N O D E 
-sudo sh -c "echo '#A P I  - N O D E ' >> $filename"
-sudo sh -c "echo 'API_PORT=3001' >> $filename"
-sudo sh -c "echo 'WEBHOOKS_HOST=node' >> $filename"
-sudo sh -c "echo 'MQTT_NOTIFICATION_HOST=${IP}' >> $filename"
-sudo sh -c "echo '' >> $filename"
-
-# M O N G O 
-sudo sh -c "echo '# M O N G O' >> $filename"
-sudo sh -c "echo 'MONGO_USERNAME=${MONGO_USERNAME}' >> $filename"
-sudo sh -c "echo 'MONGO_PASSWORD=${MONGO_PASSWORD}' >> $filename"
-sudo sh -c "echo 'MONGO_HOST=mongo' >> $filename"
-sudo sh -c "echo 'MONGO_PORT=${MONGO_PORT}' >> $filename"
-sudo sh -c "echo 'MONGO_DATABASE=ioticos_god_level' >> $filename"
-sudo sh -c "echo '' >> $filename"
-
-
-
-# E M Q X
-sudo sh -c " echo 'EMQX_DEFAULT_APPLICATION_SECRET=${EMQX_DEFAULT_APPLICATION_SECRET}' >> $filename"
-sudo sh -c " echo 'EMQX_NODE_SUPERUSER_USER=${EMQX_NODE_SUPERUSER_USER}' >> $filename"
-sudo sh -c " echo 'EMQX_NODE_SUPERUSER_PASSWORD=${EMQX_NODE_SUPERUSER_PASSWORD}' >> $filename"
-sudo sh -c " echo 'EMQX_API_HOST=${IP}' >> $filename"
-sudo sh -c " echo 'EMQX_API_TOKEN=${EMQX_API_TOKEN}' >> $filename"
-sudo sh -c "echo 'EMQX_RESOURCES_DELAY=30000' >> $filename"
-sudo sh -c "echo '' >> $filename"
-
-# F R O N T
-sudo sh -c "echo '# F R O N T' >> $filename"
-sudo sh -c "echo 'APP_PORT=3000' >> $filename"
-sudo sh -c "echo 'AXIOS_BASE_URL=${SSL}${DOMAIN}:3001/api' >> $filename"
-
-sudo sh -c "echo 'MQTT_PORT=${MQTT_PORT}' >> $filename"
-sudo sh -c "echo 'MQTT_HOST=${DOMAIN}' >> $filename"
-sudo sh -c "echo 'MQTT_PREFIX=${WSPREFIX}' >> $filename"
+    ## ______________________________
+    ## INSALL INIT
+    filename='.env'
 
 
-sudo sh -c " echo 'SSLREDIRECT=${SSLREDIRECT}' >> $filename"
+    #SERVICES .ENV
+    sudo sh -c " echo 'environment=prod' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '# TIMEZONE (all containers).' >> $filename"
+    sudo sh -c " echo 'TZ=${TZ}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '# M O N G O' >> $filename"
+    sudo sh -c " echo 'MONGO_USERNAME=${MONGO_USERNAME}' >> $filename"
+    sudo sh -c " echo 'MONGO_PASSWORD=${MONGO_PASSWORD}' >> $filename"
+    sudo sh -c " echo 'MONGO_EXT_PORT=${MONGO_PORT}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '# E M Q X' >> $filename"
+    sudo sh -c " echo 'EMQX_DEFAULT_USER_PASSWORD=${EMQX_DEFAULT_USER_PASSWORD}' >> $filename"
+    sudo sh -c " echo 'EMQX_DEFAULT_APPLICATION_SECRET=${EMQX_DEFAULT_APPLICATION_SECRET}' >> $filename"
 
-# WEB PUSH
-sudo sh -c "echo 'PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}' >> $filename"
-sudo sh -c "echo 'PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}' >> $filename"
+    sudo git clone https://github.com/Gpache/app_segurit.git
+    sudo mv app_segurit  app
 
-cd ..
+    cd app
+
+    sudo sh -c "echo 'environment=prod' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    #A P I  - N O D E 
+    sudo sh -c "echo '#A P I  - N O D E ' >> $filename"
+    sudo sh -c "echo 'API_PORT=3001' >> $filename"
+    sudo sh -c "echo 'WEBHOOKS_HOST=node' >> $filename"
+    sudo sh -c "echo 'MQTT_NOTIFICATION_HOST=${IP}' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    # M O N G O 
+    sudo sh -c "echo '# M O N G O' >> $filename"
+    sudo sh -c "echo 'MONGO_USERNAME=${MONGO_USERNAME}' >> $filename"
+    sudo sh -c "echo 'MONGO_PASSWORD=${MONGO_PASSWORD}' >> $filename"
+    sudo sh -c "echo 'MONGO_HOST=mongo' >> $filename"
+    sudo sh -c "echo 'MONGO_PORT=${MONGO_PORT}' >> $filename"
+    sudo sh -c "echo 'MONGO_DATABASE=ioticos_god_level' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    # E M Q X
+    sudo sh -c " echo 'EMQX_DEFAULT_APPLICATION_SECRET=${EMQX_DEFAULT_APPLICATION_SECRET}' >> $filename"
+    sudo sh -c " echo 'EMQX_NODE_SUPERUSER_USER=${EMQX_NODE_SUPERUSER_USER}' >> $filename"
+    sudo sh -c " echo 'EMQX_NODE_SUPERUSER_PASSWORD=${EMQX_NODE_SUPERUSER_PASSWORD}' >> $filename"
+    sudo sh -c " echo 'EMQX_API_HOST=${IP}' >> $filename"
+    sudo sh -c " echo 'EMQX_API_TOKEN=${EMQX_API_TOKEN}' >> $filename"
+    sudo sh -c "echo 'EMQX_RESOURCES_DELAY=30000' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    # F R O N T
+    sudo sh -c "echo '# F R O N T' >> $filename"
+    sudo sh -c "echo 'APP_PORT=3000' >> $filename"
+    sudo sh -c "echo 'AXIOS_BASE_URL=${SSL}${DOMAIN}:3001/api' >> $filename"
+
+    sudo sh -c "echo 'MQTT_PORT=${MQTT_PORT}' >> $filename"
+    sudo sh -c "echo 'MQTT_HOST=${DOMAIN}' >> $filename"
+    sudo sh -c "echo 'MQTT_PREFIX=${WSPREFIX}' >> $filename"
+
+    sudo sh -c " echo 'SSLREDIRECT=${SSLREDIRECT}' >> $filename"
+
+    # WEB PUSH
+    sudo sh -c "echo 'PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}' >> $filename"
+    sudo sh -c "echo 'PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}' >> $filename"
+
+    cd ..
+
+    sudo docker-compose -f docker_node_install.yml up
+    sudo docker-compose -f docker_nuxt_build.yml up
+    sudo docker-compose -f docker_compose_production.yml up -d
+
+    # INSTALL CERTIFICATES
+
+    if ! [ -x "$(command -v docker-compose)" ]; then
+      echo 'Error: docker-compose is not installed.' >&2
+      exit 1
+    fi
+
+    domains=($DOMAIN www.$DOMAIN)
+    rsa_key_size=4096
+    data_path="./data/certbot"
+    email="$EMAIL" # Adding a valid address is strongly recommended
+    staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
+
+    if [ -d "$data_path" ]; then
+      read -p "Existing data found for $domains. Continue and replace existing certificate? (y/N) " decision
+      if [ "$decision" != "Y" ] && [ "$decision" != "y" ]; then
+        exit
+      fi
+    fi
 
 
+    if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ] || [ ! -e "$data_path/conf/ssl-dhparams.pem" ]; then
+      echo "### Downloading recommended TLS parameters ..."
+      sudo mkdir -p "$data_path/conf"
+      curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "$data_path/conf/options-ssl-nginx.conf"
+      curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "$data_path/conf/ssl-dhparams.pem"
+      echo
+    fi
 
-sudo docker-compose -f docker_node_install.yml up
-sudo docker-compose -f docker_nuxt_build.yml up
-sudo docker-compose -f docker_compose_production.yml up -d
+    echo "### Creating dummy certificate for $domains ..."
+    path="/etc/letsencrypt/live/$domains"
+    sudo mkdir -p "$data_path/conf/live/$domains"
+    docker-compose run --rm --entrypoint "\
+      openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
+        -keyout '$path/privkey.pem' \
+        -out '$path/fullchain.pem' \
+        -subj '/CN=localhost'" certbot
+    echo
 
 
+    echo "### Starting nginx ..."
+    docker-compose up --force-recreate -d nginx
+    echo
+
+    echo "### Deleting dummy certificate for $domains ..."
+    docker-compose run --rm --entrypoint "\
+      rm -Rf /etc/letsencrypt/live/$domains && \
+      rm -Rf /etc/letsencrypt/archive/$domains && \
+      rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
+    echo
 
 
+    echo "### Requesting Let's Encrypt certificate for $domains ..."
+    #Join $domains to -d args
+    domain_args=""
+    for domain in "${domains[@]}"; do
+      domain_args="$domain_args -d $domain"
+    done
+
+    # Select appropriate email arg
+    case "$email" in
+      "") email_arg="--register-unsafely-without-email" ;;
+      *) email_arg="--email $email" ;;
+    esac
+
+    # Enable staging mode if needed
+    if [ $staging != "0" ]; then staging_arg="--staging"; fi
+
+    docker-compose run --rm --entrypoint "\
+      certbot certonly --webroot -w /var/www/certbot \
+        $staging_arg \
+        $email_arg \
+        $domain_args \
+        --rsa-key-size $rsa_key_size \
+        --agree-tos \
+        --force-renewal" certbot
+    echo
+
+    echo "### Reloading nginx ..."
+    docker-compose exec nginx nginx -s reload
+
+    cd data
+    cd nginx
+
+    sudo rm -rf app.conf
+
+    filename='app.conf'
+    sudo sh -c " echo '#upstream miapp {' >> $filename"
+    sudo sh -c " echo '#        server node:3000;' >> $filename"
+    sudo sh -c " echo '#};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 80;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '    location /.well-known/acme-challenge/ {' >> $filename"
+    sudo sh -c " echo '    root /var/www/certbot;' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '    return 301 https://\$host\$request_uri;' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 443 ssl;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '        proxy_pass http://node:3000; #for demo purposes' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;' >> $filename"
+    sudo sh -c " echo '    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;' >> $filename"
+    sudo sh -c " echo '    include /etc/letsencrypt/options-ssl-nginx.conf;' >> $filename"
+    sudo sh -c " echo '    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 3001 ssl;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '        proxy_pass http://node:3001; #for demo purposes' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;' >> $filename"
+    sudo sh -c " echo '    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;' >> $filename"
+    sudo sh -c " echo '    include /etc/letsencrypt/options-ssl-nginx.conf;' >> $filename"
+    sudo sh -c " echo '    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 8084 ssl;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '        proxy_pass http://emqx:8083; #for demo purposes' >> $filename"
+    sudo sh -c " echo '        # Aquí comienza el soporte a WebSockets' >> $filename"
+    sudo sh -c " echo '        proxy_http_version 1.1;' >> $filename"
+    sudo sh -c " echo '        proxy_set_header Upgrade \$http_upgrade;' >> $filename"
+    sudo sh -c " echo '        proxy_set_header Connection \"upgrade\";' >> $filename"
+    sudo sh -c " echo '        # Aquí termina' >> $filename"
+    sudo sh -c " echo '        proxy_set_header Host \$host;' >> $filename"
+    sudo sh -c " echo '        proxy_set_header X-Real-IP \$remote_addr;' >> $filename"
+    sudo sh -c " echo '        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;' >> $filename"
+    sudo sh -c " echo '        proxy_set_header X-Forwarded-Proto https;' >> $filename"
+    sudo sh -c " echo '        proxy_redirect off;' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;' >> $filename"
+    sudo sh -c " echo '    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;' >> $filename"
+    sudo sh -c " echo '    include /etc/letsencrypt/options-ssl-nginx.conf;' >> $filename"
+    sudo sh -c " echo '    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+
+    sudo sh -c " echo 'server {' >> $filename"
+    sudo sh -c " echo '    listen 18084 ssl;' >> $filename"
+    sudo sh -c " echo '    server_name ${DOMAIN};' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    location / {' >> $filename"
+    sudo sh -c " echo '        proxy_pass http://emqx:18083; #for demo purposes' >> $filename"
+    sudo sh -c " echo '    }' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;' >> $filename"
+    sudo sh -c " echo '    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;' >> $filename"
+    sudo sh -c " echo '    include /etc/letsencrypt/options-ssl-nginx.conf;' >> $filename"
+    sudo sh -c " echo '    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
 
 
+    #sudo touch app.conf
+    cd ..
+    cd ..
 
+    sudo docker stop $(sudo docker ps -a -q)
+    sudo docker rm $(sudo docker ps -a -q)
+    sudo docker volume rm -f foo-emqx-data
+    sudo docker volume rm -f foo-emqx-log
+
+    sudo docker-compose -f docker_node_install.yml up
+    sudo docker-compose -f docker_nuxt_build.yml up
+    sudo docker-compose -f docker_compose_production.yml up -d
+
+    sudo docker-compose -f docker_nuxt_build.yml up
+    sudo docker restart nginx_proxy
+
+  else
+    cd services
+
+    ## ______________________________
+    ## INSALL INIT
+    filename='.env'
+
+
+    #SERVICES .ENV
+    sudo sh -c " echo 'environment=dev' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '# TIMEZONE (all containers).' >> $filename"
+    sudo sh -c " echo 'TZ=${TZ}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '# M O N G O' >> $filename"
+    sudo sh -c " echo 'MONGO_USERNAME=${MONGO_USERNAME}' >> $filename"
+    sudo sh -c " echo 'MONGO_PASSWORD=${MONGO_PASSWORD}' >> $filename"
+    sudo sh -c " echo 'MONGO_EXT_PORT=${MONGO_PORT}' >> $filename"
+    sudo sh -c " echo '' >> $filename"
+    sudo sh -c " echo '# E M Q X' >> $filename"
+    sudo sh -c " echo 'EMQX_DEFAULT_USER_PASSWORD=${EMQX_DEFAULT_USER_PASSWORD}' >> $filename"
+    sudo sh -c " echo 'EMQX_DEFAULT_APPLICATION_SECRET=${EMQX_DEFAULT_APPLICATION_SECRET}' >> $filename"
+
+    cd ..
+
+    sudo git clone https://github.com/Gpache/app_segurit.git
+    sudo mv app_segurit  app
+
+    cd app
+
+    sudo sh -c "echo 'environment=prod' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    #A P I  - N O D E 
+    sudo sh -c "echo '#A P I  - N O D E ' >> $filename"
+    sudo sh -c "echo 'API_PORT=3001' >> $filename"
+    sudo sh -c "echo 'WEBHOOKS_HOST=node' >> $filename"
+    sudo sh -c "echo 'MQTT_NOTIFICATION_HOST=${IP}' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    # M O N G O 
+    sudo sh -c "echo '# M O N G O' >> $filename"
+    sudo sh -c "echo 'MONGO_USERNAME=${MONGO_USERNAME}' >> $filename"
+    sudo sh -c "echo 'MONGO_PASSWORD=${MONGO_PASSWORD}' >> $filename"
+    sudo sh -c "echo 'MONGO_HOST=mongo' >> $filename"
+    sudo sh -c "echo 'MONGO_PORT=${MONGO_PORT}' >> $filename"
+    sudo sh -c "echo 'MONGO_DATABASE=ioticos_god_level' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    # E M Q X
+    sudo sh -c " echo 'EMQX_DEFAULT_APPLICATION_SECRET=${EMQX_DEFAULT_APPLICATION_SECRET}' >> $filename"
+    sudo sh -c " echo 'EMQX_NODE_SUPERUSER_USER=${EMQX_NODE_SUPERUSER_USER}' >> $filename"
+    sudo sh -c " echo 'EMQX_NODE_SUPERUSER_PASSWORD=${EMQX_NODE_SUPERUSER_PASSWORD}' >> $filename"
+    sudo sh -c " echo 'EMQX_API_HOST=${IP}' >> $filename"
+    sudo sh -c " echo 'EMQX_API_TOKEN=${EMQX_API_TOKEN}' >> $filename"
+    sudo sh -c "echo 'EMQX_RESOURCES_DELAY=30000' >> $filename"
+    sudo sh -c "echo '' >> $filename"
+
+    # F R O N T
+    sudo sh -c "echo '# F R O N T' >> $filename"
+    sudo sh -c "echo 'APP_PORT=3000' >> $filename"
+    sudo sh -c "echo 'AXIOS_BASE_URL=${SSL}${DOMAIN}:3001/api' >> $filename"
+
+    sudo sh -c "echo 'MQTT_PORT=${MQTT_PORT}' >> $filename"
+    sudo sh -c "echo 'MQTT_HOST=${DOMAIN}' >> $filename"
+    sudo sh -c "echo 'MQTT_PREFIX=${WSPREFIX}' >> $filename"
+
+    sudo sh -c " echo 'SSLREDIRECT=${SSLREDIRECT}' >> $filename"
+
+    # WEB PUSH
+    sudo sh -c "echo 'PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}' >> $filename"
+    sudo sh -c "echo 'PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}' >> $filename"
+
+    cd ..
+
+    sudo docker-compose up -d
+    
+fi

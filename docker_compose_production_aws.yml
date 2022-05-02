@@ -7,33 +7,6 @@ volumes:
     name: foo-emqx-log
 
 services:
-  nginx:
-    container_name: nginx_proxy
-    image: nginx:1.15-alpine
-    restart: always
-    links:
-      - node
-      - emqx
-      - mongo
-    ports:
-      - "80:80"
-      - "443:443"
-      - "3001:3001"
-      - "18084:18084"
-      - "8084:8084"
-    volumes:
-      - ./data/nginx:/etc/nginx/conf.d
-      #- ./data/nginx/emqx:/etc/nginx/nginx.conf
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-    #command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-    #entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-
   node:
     container_name: node
     image: "node:14"
@@ -41,10 +14,10 @@ services:
     working_dir: /home/node/app
     volumes:
       - ./app/:/home/node/app
-    #ports:
-     # - "3000:3000"
-     # - "3001:3001"
-     # - "80:3002"
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "80:3002"
 
     links:
       - emqx
@@ -67,16 +40,16 @@ services:
       - ./mongodata:/data/db
     ports:
       - ${MONGO_EXT_PORT}:27017
-  
+
   emqx:
     container_name: emqx
     image: emqx/emqx:4.2.3
     restart: always
 
     ports:
-      #- 18083:18083
+      - 18083:18083
       - 1883:1883
-      #- 8083:8083
+      - 8083:8083
       - 8085:8081
 
     volumes:
@@ -88,7 +61,7 @@ services:
 
     extra_hosts:
       - "localhost:192.168.0.6"
-    
+
     environment:
       EMQX_NAME: segurit
       EMQX_HOST: 127.0.0.1

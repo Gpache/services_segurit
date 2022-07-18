@@ -161,6 +161,23 @@ do
   echo "      Selected PRIVATE KEY ► ${PRIVATE_VAPID_KEY} ✅"
 done
 
+#EMAIL USER
+printf "\n\n🔐 Ingrese el email para utilizar el servicio de correo electrónico \n"
+while [[ -z "$EMAIL_USER" ]]
+do
+  read -p "   EMAIL USER (iotabcompany@gmail.com): "  EMAIL_USER
+  EMAIL_USER=${EMAIL_USER:-iotabcompany@gmail.com}
+  echo "      Selected EMAIL USER ► ${EMAIL_USER} ✅"
+done
+
+#EMAIL PASSWORD
+printf "\n\n🔐 Ingrese la contraseña proporcionada por google para utilizar el servicio de correo electrónico \n"
+while [[ -z "$EMAIL_PASSWORD" ]]
+do
+  read -p "   EMAIL PASSWORD (qvfefxhflkwipcuk): "  EMAIL_PASSWORD
+  EMAIL_PASSWORD=${EMAIL_PASSWORD:-qvfefxhflkwipcuk}
+  echo "      Selected EMAIL PASSWORD ► ${EMAIL_PASSWORD} ✅"
+done
 
 
 ## ______________________________
@@ -293,6 +310,8 @@ printf "   🟢 IP: $(tput setaf 128)${IP}$(tput setaf 7)\n"
 printf "   🟢 SSL?: $(tput setaf 128)${opt}$(tput setaf 7)\n"
 printf "   🟢 PUBLIC KEY: $(tput setaf 128)${PUBLIC_VAPID_KEY}$(tput setaf 7)\n"
 printf "   🟢 PRIVATE KEY: $(tput setaf 128)${PRIVATE_VAPID_KEY}$(tput setaf 7)\n"
+printf "   🟢 EMAIL USER: $(tput setaf 128)${EMAIL_USER}$(tput setaf 7)\n"
+printf "   🟢 EMAIL PASSWORD: $(tput setaf 128)${EMAIL_PASSWORD}$(tput setaf 7)\n"
 
 printf "\n\n\n\n";
 read -p "Presiona Enter para comenzar la instalación..."
@@ -419,6 +438,10 @@ if [[ $ENTORNO -eq 1 ]]
     # WEB PUSH
     sudo sh -c "echo 'PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}' >> $filename"
     sudo sh -c "echo 'PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}' >> $filename"
+
+    #EMAIL
+    sudo sh -c "echo 'EMAIL_USER=${EMAIL_USER}' >> $filename"
+    sudo sh -c "echo 'EMAIL_PASSWORD=${EMAIL_PASSWORD}' >> $filename"
 
     cd ..
 
@@ -690,6 +713,10 @@ if [[ $ENTORNO -eq 1 ]]
     # WEB PUSH
     sudo sh -c "echo 'PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}' >> $filename"
     sudo sh -c "echo 'PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}' >> $filename"
+
+    # EMAIL
+    sudo sh -c "echo 'EMAIL_USER=${EMAIL_USER}' >> $filename"
+    sudo sh -c "echo 'EMAIL_PASSWORD=${EMAIL_PASSWORD}' >> $filename"
 
     cd ..
 
